@@ -1,0 +1,10 @@
+* create class for prediction input data
+* filter that data and pass it through the model (or model stub)
+* return prediction (or average)
+
+* create class for admin input data
+* implement very simple authentication
+* try to open models with given path - return error upon failure
+* create log file and group file
+
+* add support for log file and group file to predictions
