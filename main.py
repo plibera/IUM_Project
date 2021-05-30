@@ -1,7 +1,8 @@
 from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import time
+from transform_input_data import *
 
 app = FastAPI()
 
@@ -10,7 +11,7 @@ class PredictionInput(BaseModel):
     city_name: str
     company_id: int
     purchase_day: int
-    purchase_time: datetime
+    purchase_time: time
 
 
 class AdminRequest(BaseModel):
@@ -21,6 +22,7 @@ class AdminRequest(BaseModel):
 
 FIRST_MODEL_PATH = None
 SECOND_MODEL_PATH = None
+data_transformer = DataTransformer()
 
 
 @app.post("/predict")
@@ -31,6 +33,8 @@ def predict_time(prediction_input: PredictionInput):
     data.pop("client_id")
 
     # transform data - to be implemented
+    transformed_data = data_transformer.transform_input_data(data)
+    print(transformed_data)
 
     # run the prediction - this is a stub
     prediction = 44
