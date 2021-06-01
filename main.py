@@ -3,6 +3,10 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import time
 from transform_input_data import *
+import pickle
+from tensorflow import keras
+import sklearn
+
 
 app = FastAPI()
 
@@ -20,6 +24,13 @@ class AdminRequest(BaseModel):
     first_model_path: str
     second_model_path: Optional[str]
 
+def predict_from_file(filename, data, isKeras):
+    if isKeras:
+        model = keras.models.load_model(filename, compile=False)
+    else:
+        model = pickle.load(open(filename, 'rb'))
+    return model.predict(data)
+
 FIRST_MODEL_PATH = None
 SECOND_MODEL_PATH = None
 data_transformer = DataTransformer()
@@ -32,21 +43,20 @@ def predict_time(prediction_input: PredictionInput):
     # choose model based on id
     data.pop("client_id")
 
-    # transform data - to be implemented
+    # transform data
     transformed_data = data_transformer.transform_input_data(data)
     print(transformed_data)
 
-    # run the prediction - this is a stub
-    prediction = 44
-    probability = 0.75
-
+    # run the prediction
+    prediction = np.float64(predict_from_file("base_model.pkl", transformed_data, False)[0][0])
+    # prediction = np.float64(predict_from_file("full_model", transformed_data, True)[0][0])
+    print(prediction)
 
     # log everything - to be implemented
     
     # return result
     return {
-        "prediction": prediction,
-        "probability": probability
+        "prediction": prediction
     }
     
 @app.post("/admin")

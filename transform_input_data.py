@@ -30,7 +30,8 @@ class DataTransformer:
         transformed_data = np.concatenate((transformed_data, company_one_hot))
         transformed_data = np.concatenate((transformed_data, purchase_day_one_hot))
         transformed_data = np.concatenate((transformed_data, time_normalized))
-        
+
+        transformed_data = np.reshape(transformed_data, (1, -1))
         return transformed_data
 
 
