@@ -2,15 +2,14 @@ from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import datetime, time
-from pydantic.errors import DecimalIsNotFiniteError
 
-from pydantic.types import Json
 from transform_input_data import *
 import pickle
 from tensorflow import keras
 import sklearn
 import json
 import csv
+import random
 
 
 app = FastAPI()
@@ -38,28 +37,54 @@ def open_model(filename, isKeras):
         model = pickle.load(open(filename, 'rb'))
     return model
 
-FIRST_MODEL_PATH = None
-SECOND_MODEL_PATH = None
-FIRST_MODEL = None
-SECOND_MODEL = None
-LOG = None
-LOG_FILE = None
-data_transformer = DataTransformer()
-
-
-@app.on_event("startup")
-def startup_event():
+def start_experiment():
     with open("config.json", "r") as config_file:
         config = json.load(config_file)
         global FIRST_MODEL
         global SECOND_MODEL
         global LOG
         global LOG_FILE
+        global GROUP_FILE
         FIRST_MODEL = open_model(config["first_model_path"], bool(config["is_first_model_keras"]))
-        SECOND_MODEL = open_model(config["second_model_path"], bool(config["is_second_model_keras"]))
+        if config["second_model_path"]:
+            SECOND_MODEL = open_model(config["second_model_path"], bool(config["is_second_model_keras"]))
         LOG_FILE = open("logs/" + config["log_base_name"] + "_log.csv", "a", newline="")
+        with open("logs/" + config["log_base_name"] + "_group.csv", "a", newline=""):
+            pass
+        GROUP_FILE = open("logs/" + config["log_base_name"] + "_group.csv", "r+", newline="")
         LOG = csv.writer(LOG_FILE)
         
+def get_group_id(client_id):
+    global GROUP_FILE
+    global SECOND_MODEL
+    group_reader = csv.reader(GROUP_FILE)
+    GROUP_FILE.seek(0)
+    for row in group_reader:
+        print(row)
+        if(int(row[0]) == client_id):
+            return int(row[1])
+    if SECOND_MODEL is not None:
+        group_id = random.randint(0, 1)
+    else:
+        group_id = 0
+    group_writer = csv.writer(GROUP_FILE)
+    group_writer.writerow([client_id, group_id])
+    GROUP_FILE.flush()
+    return group_id
+
+FIRST_MODEL_PATH = None
+SECOND_MODEL_PATH = None
+FIRST_MODEL = None
+SECOND_MODEL = None
+LOG = None
+LOG_FILE = None
+GROUP_FILE = None
+data_transformer = DataTransformer()
+
+
+@app.on_event("startup")
+def startup_event():
+    start_experiment()    
 
 
 @app.post("/predict")
@@ -67,6 +92,7 @@ def predict_time(prediction_input: PredictionInput):
     data = prediction_input.dict()
 
     # choose model based on id
+    get_group_id(data["client_id"])
 
     # transform data
     transformed_data = data_transformer.transform_input_data(data)
@@ -98,18 +124,23 @@ def manage_experiments(admin_request: AdminRequest):
         return "Username and password do not match"
 
     config_data = {}
+    config_data["log_base_name"] = str(datetime.now()).replace(" ", "").replace(".", "").replace(":", "")
     config_data["first_model_path"] = admin_request.first_model_path
     config_data["is_first_model_keras"] = admin_request.is_first_model_keras
+    config_data["log_base_name"] += admin_request.first_model_path.replace(".", "")
     
+    config_data["second_model_path"] = None
     if admin_request.second_model_path:
         config_data["second_model_path"] = admin_request.second_model_path
+        config_data["log_base_name"] += admin_request.second_model_path.replace(".", "")
         config_data["is_second_model_keras"] = 0 # default to no
         if admin_request.is_second_model_keras:
             config_data["is_second_model_keras"] = admin_request.is_second_model_keras
 
-    FIRST_MODEL_PATH = admin_request.first_model_path
-    if(admin_request.second_model_path):
-        SECOND_MODEL_PATH = admin_request.second_model_path
-    else:
-        SECOND_MODEL_PATH = ""
+    with open("config.json", "w") as config_file:
+        json.dump(config_data, config_file)
+
+    start_experiment()
+    
+    return "Successfully started new experiment"
 

@@ -1,7 +1,1 @@
-{
-    "first_model_path": "base_model.pkl",
-    "is_first_model_keras": 0,
-    "second_model_path": "full_model",
-    "is_second_model_keras": 1,
-    "log_base_name" : "test"
-}
+{"log_base_name": "2021-06-02215524040828full_modelbase_modelpkl", "first_model_path": "full_model", "is_first_model_keras": 1, "second_model_path": "base_model.pkl", "is_second_model_keras": 0}
