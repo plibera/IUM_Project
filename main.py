@@ -54,7 +54,6 @@ def get_group_id(client_id):
     group_reader = csv.reader(GROUP_FILE)
     GROUP_FILE.seek(0)
     for row in group_reader:
-        print(row)
         if(int(row[0]) == client_id):
             return int(row[1])
     if SECOND_MODEL is not None:
