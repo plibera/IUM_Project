@@ -5,6 +5,6 @@
 // create class for admin input data
 // implement very simple authentication
 * try to open models with given path - return error upon failure
-* create log file and group file
+// create log file and group file
 
-* add support for log file and group file to predictions
+// add support for log file and group file to predictions

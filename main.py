@@ -1,34 +1,20 @@
-from typing import Optional
-from fastapi import FastAPI
-from pydantic import BaseModel
-from datetime import datetime, time
-
-from transform_input_data import *
 import pickle
 from tensorflow import keras
-import sklearn
-import json
 import csv
 import random
+import sklearn
+import json
+
+from globals import *
+from transform_input_data import *
+from request_objects import *
 
 
-app = FastAPI()
-
-class PredictionInput(BaseModel):
-    client_id: int
-    city_name: str
-    company_id: int
-    purchase_day: int
-    purchase_time: time
 
 
-class AdminRequest(BaseModel):
-    username: str
-    password: str
-    first_model_path: str
-    is_first_model_keras: int
-    second_model_path: Optional[str]
-    is_second_model_keras: Optional[int]
+
+
+# helper functions
 
 def open_model(filename, isKeras):
     if isKeras:
@@ -45,9 +31,17 @@ def start_experiment():
         global LOG
         global LOG_FILE
         global GROUP_FILE
+        
+        # reset models
+        FIRST_MODEL = None
+        SECOND_MODEL = None
+
+        # open models
         FIRST_MODEL = open_model(config["first_model_path"], bool(config["is_first_model_keras"]))
         if config["second_model_path"]:
             SECOND_MODEL = open_model(config["second_model_path"], bool(config["is_second_model_keras"]))
+        
+        # open log and group file
         LOG_FILE = open("logs/" + config["log_base_name"] + "_log.csv", "a", newline="")
         with open("logs/" + config["log_base_name"] + "_group.csv", "a", newline=""):
             pass
@@ -72,15 +66,15 @@ def get_group_id(client_id):
     GROUP_FILE.flush()
     return group_id
 
-FIRST_MODEL_PATH = None
-SECOND_MODEL_PATH = None
-FIRST_MODEL = None
-SECOND_MODEL = None
-LOG = None
-LOG_FILE = None
-GROUP_FILE = None
-data_transformer = DataTransformer()
 
+
+
+
+
+
+# app requests
+
+app = FastAPI()
 
 @app.on_event("startup")
 def startup_event():
@@ -92,20 +86,23 @@ def predict_time(prediction_input: PredictionInput):
     data = prediction_input.dict()
 
     # choose model based on id
-    get_group_id(data["client_id"])
+    group_id = get_group_id(data["client_id"])
 
     # transform data
     transformed_data = data_transformer.transform_input_data(data)
-    print(transformed_data)
+
+    # use defined models
+    global FIRST_MODEL
+    global SECOND_MODEL
 
     # run the prediction
-    prediction = np.float64(FIRST_MODEL.predict(transformed_data)[0][0])
-    # prediction = np.float64(predict_from_file("base_model.pkl", transformed_data, False)[0][0])
-    # prediction = np.float64(predict_from_file("full_model", transformed_data, True)[0][0])
-    print(prediction)
+    if 0 == group_id:
+        prediction = np.float64(FIRST_MODEL.predict(transformed_data)[0][0])
+    else:
+        prediction = np.float64(SECOND_MODEL.predict(transformed_data)[0][0])
 
-    # log everything - to be implemented
-    LOG.writerow([datetime.now(), data["client_id"], data["city_name"], data["company_id"], data["purchase_day"], data["purchase_time"], prediction])
+    # log everything
+    LOG.writerow([datetime.now(), data["client_id"], data["city_name"], data["company_id"], data["purchase_day"], data["purchase_time"], group_id, prediction])
     LOG_FILE.flush()
     
     # return result
@@ -130,10 +127,10 @@ def manage_experiments(admin_request: AdminRequest):
     config_data["log_base_name"] += admin_request.first_model_path.replace(".", "")
     
     config_data["second_model_path"] = None
-    if admin_request.second_model_path:
+    config_data["is_second_model_keras"] = 0 # default to no
+    if admin_request.second_model_path and admin_request.second_model_path != "":
         config_data["second_model_path"] = admin_request.second_model_path
         config_data["log_base_name"] += admin_request.second_model_path.replace(".", "")
-        config_data["is_second_model_keras"] = 0 # default to no
         if admin_request.is_second_model_keras:
             config_data["is_second_model_keras"] = admin_request.is_second_model_keras
 
