@@ -49,12 +49,12 @@ Do wykazania, że mikroserwis działa, przeprowadzono przykładowy eksperyment. 
 3. Za pomocą skryptu `send_requests.py` wysłano zapytania typu `predict` dotyczące zbioru testowego.
 4. Za pomocą skryptu `analyze_log.py` przeanalizowano powstały log. Zwrócił on następujące informacje:  
 
-        First  model rmse: 17.99698372734838
-        Second model rmse: 14.931883426249822
+        First  model rmse: 16.85166766033726
+        Second model rmse: 11.612625941221134
 
     Dane te mogą nieznacznie odbiegać od tych wyznaczonych w trakcie modelowania. Spowodowane jest to tym, iż w trakcie modelowania każdy element zbioru testowego został sprawdzony na obydwu modelach, a tu tylko na jednym z nich.
 
-5. Wyniki eksperymentu potwierdzają, iż model docelowy jest lepszy od bazowego.
+5. Wyniki eksperymentu potwierdzają, iż model docelowy (Second model) jest lepszy od bazowego (First model).
 
 ## Materiały pokazujące, że implementacja mikroserwisu działa
 W tej sekcji zamieszczone zostały zrzuty ekranu z [graficznego interfejsu do FastAPI](http://127.0.0.1:8000/docs), przy pomocy którego wykonano zapytania obydwu typów.
